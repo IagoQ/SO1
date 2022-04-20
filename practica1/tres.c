@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <pthread.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -26,6 +27,7 @@ void quit(char *s)
 }
 
 int U = 0;
+pthread_mutex_t mutex;
 
 int fd_readline(int fd, char *buf)
 {
@@ -66,16 +68,34 @@ void handle_conn(int csock)
 			return;
 		}
 
+
 		if (!strcmp(buf, "NUEVO")) {
 			char reply[20];
+
+      // la zona critica es solamente el contador, lectura y inc 
+      pthread_mutex_lock(&mutex);
 			sprintf(reply, "%d\n", U);
 			U++;
+      pthread_mutex_unlock(&mutex);
+
 			write(csock, reply, strlen(reply));
 		} else if (!strcmp(buf, "CHAU")) {
 			close(csock);
 			return;
 		}
 	}
+}
+
+void *handle_conn_wrapper(void *arg){
+  int sock = *( (int*) arg);
+  handle_conn(sock);
+  return NULL;
+}
+
+void concurrent_handle_conn(int csock){
+  pthread_t t;
+	pthread_create(&t,NULL,handle_conn_wrapper, (void*)&csock);
+  return;
 }
 
 void wait_for_clients(int lsock)
@@ -88,7 +108,13 @@ void wait_for_clients(int lsock)
 		quit("accept");
 
 	/* Atendemos al cliente */
-	handle_conn(csock);
+  pthread_t t;
+	pthread_create(&t,NULL,handle_conn_wrapper, (void*)&csock);
+  // handle_conn(&csock);
+  
+  // DUDA: si lo implemento de esta manera (para no mezclar la logica de lanzar los pthreads), al castear el int a void* e int devuelta cambia el valor, no me estoy dando cuenta pq
+  // concurrent_handle_conn(csock);
+
 
 	/* Volvemos a esperar conexiones */
 	wait_for_clients(lsock);

@@ -38,7 +38,8 @@ int fd_readline(int fd, char *buf)
 	 * Leemos de a un caracter (no muy eficiente...) hasta
 	 * completar una línea.
 	 */
-	while ((rc = read(fd, buf + i, 1)) > 0) {
+	while ((rc = read(fd, buf + i, 1)) > 0)
+	{
 		if (buf[i] == '\n')
 			break;
 		i++;
@@ -56,46 +57,38 @@ void handle_conn(int csock)
 	char buf[200];
 	int rc;
 
-	while (1) {
+	while (1)
+	{
 		/* Atendemos pedidos, uno por linea */
 		rc = fd_readline(csock, buf);
 		if (rc < 0)
 			quit("read... raro");
 
-		if (rc == 0) {
+		if (rc == 0)
+		{
 			/* linea vacia, se cerró la conexión */
 			close(csock);
 			return;
 		}
 
-
-		if (!strcmp(buf, "NUEVO")) {
+		if (!strcmp(buf, "NUEVO"))
+		{
 			char reply[20];
 
-      // la zona critica es solamente el contador, lectura y inc 
-      pthread_mutex_lock(&mutex);
+			// la zona critica es solamente el contador, lectura y inc
+			pthread_mutex_lock(&mutex);
 			sprintf(reply, "%d\n", U);
 			U++;
-      pthread_mutex_unlock(&mutex);
+			pthread_mutex_unlock(&mutex);
 
 			write(csock, reply, strlen(reply));
-		} else if (!strcmp(buf, "CHAU")) {
+		}
+		else if (!strcmp(buf, "CHAU"))
+		{
 			close(csock);
 			return;
 		}
 	}
-}
-
-void *handle_conn_wrapper(void *arg){
-  int sock = *( (int*) arg);
-  handle_conn(sock);
-  return NULL;
-}
-
-void concurrent_handle_conn(int csock){
-  pthread_t t;
-	pthread_create(&t,NULL,handle_conn_wrapper, (void*)&csock);
-  return;
 }
 
 void wait_for_clients(int lsock)
@@ -108,13 +101,7 @@ void wait_for_clients(int lsock)
 		quit("accept");
 
 	/* Atendemos al cliente */
-  pthread_t t;
-	pthread_create(&t,NULL,handle_conn_wrapper, (void*)&csock);
-  // handle_conn(&csock);
-  
-  // DUDA: si lo implemento de esta manera (para no mezclar la logica de lanzar los pthreads), al castear el int a void* e int devuelta cambia el valor, no me estoy dando cuenta pq
-  // concurrent_handle_conn(csock);
-
+	handle_conn(&csock);
 
 	/* Volvemos a esperar conexiones */
 	wait_for_clients(lsock);
@@ -158,8 +145,5 @@ int main()
 {
 	int lsock;
 	lsock = mk_lsock();
-
-	pthread_mutex_init(&mutex,NULL);
-
 	wait_for_clients(lsock);
 }

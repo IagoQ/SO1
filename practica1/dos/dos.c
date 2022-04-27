@@ -53,35 +53,27 @@ int launchCommands(char **firstArgs, char**secondArgs){
   }
 
   if (childpid == 0){
-    // right commands
-    // close stdin, dup pipeout to override it
     close(1);
     dup(fd[1]);
 
     close(fd[0]);
 
-    return execv(secondArgs[0], secondArgs);
-
+    return execvp(firstArgs[0], firstArgs);
   } else  {
-    // left command
-
-    // close stdout, dup pipein to override it
     close(0);
     dup(fd[0]);
 
     close(fd[1]);
 
-    return execv(firstArgs[0], firstArgs);
+    return execvp(secondArgs[0], secondArgs);
   }
 }
 
 void freeArgs(char **args){
   int i;
-  for (i = 0; args[i] != NULL; i++)
-  {
+  for (i = 0; args[i] != NULL; i++){
     free(args[i]);
   }
-  free(args[i]);
   free(args);
 }
 
@@ -93,10 +85,10 @@ int main(int argc, char **argv)
   for (fgets(input, MAX_LINE, stdin); strcmp(input, "exit\n"); fgets(input, MAX_LINE, stdin))
   {
 
-    char **firstArgs = extractCommand(strtok(input, "|"));
-    char **secondArgs = extractCommand(strtok(NULL, "|"));
-
-
+    char *rest;
+    char **firstArgs = extractCommand(strtok_r(input, "|", &rest));
+    char **secondArgs = extractCommand(strtok_r(NULL, "|", &rest));
+   
     pid_t pid = fork();
     if (pid < 0)
     {
@@ -104,7 +96,6 @@ int main(int argc, char **argv)
     }
     else if (pid == 0)
     {
-
       launchCommands(firstArgs, secondArgs);
     }
     wait(&wstatus);

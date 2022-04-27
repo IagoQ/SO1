@@ -20,7 +20,6 @@ char *aux(char *str, int l, int r)
 }
 
 char **extractCommand(char *input){
-
   char **list = malloc(sizeof(char *) * MAX_ARGS);
   int l = 0, r = 0, c = 0, i;
 
@@ -40,6 +39,23 @@ char **extractCommand(char *input){
   }
   list[i++] = NULL;
   return list;
+}
+
+char **extractCommand2(char *input){
+  char **tokens = malloc(sizeof(char*) * MAX_ARGS);
+
+  char *token, *str, *tofree;
+  tofree = str = strdup(input);  
+  int i = 0;
+  while((token = strsep(&str, " "))){
+    if(!(token[0] == '\0')){
+      tokens[i] = strdup(token);
+      i++;
+    }
+   } 
+
+  free(tofree);
+  return tokens;
 }
 
 int launchCommands(char **firstArgs, char**secondArgs){
@@ -86,9 +102,22 @@ int main(int argc, char **argv)
   {
 
     char *rest;
-    char **firstArgs = extractCommand(strtok_r(input, "|", &rest));
-    char **secondArgs = extractCommand(strtok_r(NULL, "|", &rest));
-   
+    char **firstArgs = extractCommand2(strtok_r(input, "|", &rest));
+    char **secondArgs = extractCommand2(strtok_r(NULL, "|", &rest));
+
+    for (int i = 0; firstArgs[i] != NULL; i++) {
+      printf("%d:%s\n",i,firstArgs[i]);
+    }
+ 
+    for (int i = 0;  secondArgs[i] != NULL;  i++) {
+      printf("%d:%s\n",i,secondArgs[i]);
+
+      for (int j = 0; j < 7; j++){
+          printf("%d ", secondArgs[i][j]);
+      }
+    }
+
+    printf("--------\n");
     pid_t pid = fork();
     if (pid < 0)
     {
@@ -101,8 +130,8 @@ int main(int argc, char **argv)
     wait(&wstatus);
 
     printf(">> ");
-    freeArgs(firstArgs);
-    freeArgs(secondArgs);
+    // freeArgs(firstArgs);
+    // freeArgs(secondArgs);
 
     fflush(stdin);
   }

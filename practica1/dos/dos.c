@@ -41,6 +41,11 @@ char **extractCommand(char *input){
   return list;
 }
 
+void removeNewline(char *input){
+  int i;
+  for (i = 0;  input[i] != '\n' && input[i] != '\0';  i++);
+  input[i] = '\0';
+}
 char **extractCommand2(char *input){
   char **tokens = malloc(sizeof(char*) * MAX_ARGS);
 
@@ -53,6 +58,9 @@ char **extractCommand2(char *input){
       i++;
     }
    } 
+
+  // the last last item keeps a \n that breaks stuff
+  removeNewline(tokens[i-1]);
 
   free(tofree);
   return tokens;
@@ -105,19 +113,6 @@ int main(int argc, char **argv)
     char **firstArgs = extractCommand2(strtok_r(input, "|", &rest));
     char **secondArgs = extractCommand2(strtok_r(NULL, "|", &rest));
 
-    for (int i = 0; firstArgs[i] != NULL; i++) {
-      printf("%d:%s\n",i,firstArgs[i]);
-    }
- 
-    for (int i = 0;  secondArgs[i] != NULL;  i++) {
-      printf("%d:%s\n",i,secondArgs[i]);
-
-      for (int j = 0; j < 7; j++){
-          printf("%d ", secondArgs[i][j]);
-      }
-    }
-
-    printf("--------\n");
     pid_t pid = fork();
     if (pid < 0)
     {

@@ -53,27 +53,25 @@ int launchCommands(char **firstArgs, char**secondArgs){
   }
 
   if (childpid == 0){
+    // right commands
+    // close stdin, dup pipeout to override it
+    close(1);
+    dup(fd[1]);
+
+    close(fd[0]);
+
+    return execv(secondArgs[0], secondArgs);
+
+  } else  {
     // left command
 
     // close stdout, dup pipein to override it
     close(0);
     dup(fd[0]);
 
-      // fd leaks?
     close(fd[1]);
 
-    execv(firstArgs[0], firstArgs);
-  } else {
-    // right commands
-
-    // close stdin, dup pipeout to override it
-    close(1);
-    dup(fd[1]);
-
-    // fd leaks?
-    close(fd[0]);
-
-    execv(secondArgs[0], secondArgs);
+    return execv(firstArgs[0], firstArgs);
   }
 }
 

@@ -4,8 +4,14 @@
 #include <semaphore.h>
 
 struct _Cond {
+    
+    /* cantidad de procesos esperando */
     int count;
+    
+    /* evita que se pierda la cuenta de procesos esperando */
     pthread_mutex_t lock;
+
+    /* indica que ocurrió la condición */
     sem_t semaforo;
 };
 

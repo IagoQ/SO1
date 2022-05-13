@@ -7,14 +7,12 @@
 #define N 2
 #define ARRLEN 10240
 
-int seq = 0;
 struct linked_sem
 {
   sem_t s;
   int type; // 0 = reader, 1 writer
   int subscribers;
   struct linked_sem *next;
-  int seq;
 };
 
 struct rwmutex
@@ -41,7 +39,6 @@ void rwmutex_RLock(struct rwmutex *mutex)
     c->type = 0;
     c->subscribers = 1;
     c->next = NULL;
-    c->seq = seq++;
 
     printf("reader got lock: 0 \n");
 
@@ -74,17 +71,14 @@ void rwmutex_RLock(struct rwmutex *mutex)
   struct linked_sem *c = malloc(sizeof(struct linked_sem));
   c->type = 0;
   c->subscribers = 1;
-  c->seq = seq++;
 
   mutex->last->next = c;
   mutex->last = c;
 
-  printf("reader waiting lock: %d \n", c->seq);
   pthread_mutex_unlock(&(mutex->mutex));
 
   sem_wait(&(c->s));
 
-  printf("reader got lock: %d \n", c->seq);
 }
 
 void rwmutex_RUnlock(struct rwmutex *mutex)
@@ -94,13 +88,9 @@ void rwmutex_RUnlock(struct rwmutex *mutex)
 
   if (mutex->current->type != 0)
   {
-    printf("Wrong type for unlock, not reader: %d \n", mutex->current->seq);
+    printf("Wrong type for unlock, not reader\n");
     exit(1);
   }
-
-
-  printf("reader unlock: %d \n", mutex->current->seq);
-
 
   mutex->current->subscribers--;
   if (mutex->current->subscribers <= 0)
@@ -133,8 +123,6 @@ void rwmutex_RWLock(struct rwmutex *mutex)
     struct linked_sem *c = malloc(sizeof(struct linked_sem));
     c->type = 1;
     c->next = NULL;
-    c->seq = seq++;
-    printf("writer got lock: 0 \n");
 
     mutex->current = c;
     mutex->last = c;
@@ -147,15 +135,12 @@ void rwmutex_RWLock(struct rwmutex *mutex)
   struct linked_sem *c = malloc(sizeof(struct linked_sem));
   c->type = 1;
   c->next = NULL;
-  c->seq = seq++;
 
   mutex->last->next = c;
   mutex->last = c;
 
-  printf("writer waiting lock: %d\n", c->seq);
   pthread_mutex_unlock(&(mutex->mutex));
   sem_wait(&(c->s));
-  printf("writer got lock: %d\n", c->seq);
 }
 
 void rwmutex_RWUnlock(struct rwmutex *mutex)
@@ -164,13 +149,12 @@ void rwmutex_RWUnlock(struct rwmutex *mutex)
 
   if (mutex->current->type != 1)
   {
-    printf("Wrong type for unlock, not Writer: %d \n", mutex->current->seq);
+    printf("Wrong type for unlock, not Writer\n");
     exit(1);
   }
 
   struct linked_sem *tmp = mutex->current;
   mutex->current = tmp->next;
-  printf("writer unlock: %d \n", tmp->seq);
   free(tmp);
 
 

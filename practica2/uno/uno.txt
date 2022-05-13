@@ -1,0 +1,5 @@
+Dada la implementacion del lock, si uno transformara la implementacion en una libreria,
+se chocaria el problema que tendria que definir de antemano la cantidad maxima de threads 
+que usaran el lock, no podria variar dinamicamente, ni usarlo libremente como uno usaria los
+locks de pthread. Ademas cada thread individual tiene que saber su id y este tiene que ser unico
+por lo que se le suma la complejidad de generar id's unicos y persistirlos en cada thread 

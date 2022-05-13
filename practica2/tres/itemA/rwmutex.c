@@ -2,39 +2,23 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
+
+#include "rwmutex.h"
+
 #include <unistd.h>
-#define M 50
-#define N 5    
+#define M 5
+#define N 5
 #define ARRLEN 10240
-
-struct rwmutex{
-  sem_t writeSem;
-
-  pthread_mutex_t mutex;
-
-  pthread_cond_t writersFinished;
-
-  int readers;
-  int writers;
-};
 
 
 void rwmutex_init(struct rwmutex *mutex){
-  mutex->readers = 0;
-  mutex->writers = 0;
-  
-  // mutex->writersFinished = PTHREAD_COND_INITIALIZER;;
-  pthread_mutex_init(&(mutex->mutex),NULL);
   sem_post(&(mutex->writeSem));
+  mutex->readers = 0;
+  pthread_mutex_init(&(mutex->readersMutex),NULL);
 }
-
 void rwmutex_RLock(struct rwmutex *mutex){
 
-	pthread_mutex_lock(&(mutex->mutex));
-
-  while(mutex->writers > 0){
-    pthread_cond_wait(&(mutex->writersFinished), &(mutex->mutex));
-  }
+	pthread_mutex_lock(&(mutex->readersMutex));
 
 	if(mutex->readers == 0){
 		sem_wait(&(mutex->writeSem));
@@ -42,12 +26,12 @@ void rwmutex_RLock(struct rwmutex *mutex){
 
 	mutex->readers++; 
 
-	pthread_mutex_unlock(&(mutex->mutex));
+	pthread_mutex_unlock(&(mutex->readersMutex));
 }
 
 void rwmutex_RUnlock(struct rwmutex *mutex){
 
-	pthread_mutex_lock(&(mutex->mutex));
+	pthread_mutex_lock(&(mutex->readersMutex));
 
 	mutex->readers--; 
 
@@ -55,27 +39,15 @@ void rwmutex_RUnlock(struct rwmutex *mutex){
 		sem_post(&(mutex->writeSem));
 	}
 
-	pthread_mutex_unlock(&(mutex->mutex));
+	pthread_mutex_unlock(&(mutex->readersMutex));
 }
 
 void rwmutex_RWLock(struct rwmutex *mutex){
-	pthread_mutex_lock(&(mutex->mutex));
-  mutex->writers++;
-	pthread_mutex_unlock(&(mutex->mutex));
-
 	sem_wait(&(mutex->writeSem));
 }
 
 void rwmutex_RWUnlock(struct rwmutex *mutex){
-	pthread_mutex_lock(&(mutex->mutex));
-  mutex->writers--;
-
-  if(mutex->writers == 0){
-    pthread_cond_broadcast(&(mutex->writersFinished));
-  }
 	sem_post(&(mutex->writeSem));
-
-	pthread_mutex_unlock(&(mutex->mutex));
 }
 
 
@@ -103,9 +75,6 @@ void * lector(void *arg){
 	while (1) {
 		sleep(random() % 3);
     rwmutex_RLock(&rwm);
-    // dada la cantidad de lectores y la duracion artificial de la lectura
-    // si el mutex no le da preferencia a los writes nunca habria un write
-    sleep(1);
 		v = arr[0];
 		for (i = 1; i < ARRLEN; i++) {
 			if (arr[i] != v)

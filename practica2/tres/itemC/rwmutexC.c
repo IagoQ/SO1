@@ -1,26 +1,12 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdio.h>
+#include "rwmutexC.h"
 #include <stdlib.h>
 #include <unistd.h>
-#define M 2
-#define N 2
+#define M 15
+#define N 15
 #define ARRLEN 10240
-
-struct linked_sem
-{
-  sem_t s;
-  int type; // 0 = reader, 1 writer
-  int subscribers;
-  struct linked_sem *next;
-};
-
-struct rwmutex
-{
-  pthread_mutex_t mutex;
-  struct linked_sem *current;
-  struct linked_sem *last;
-};
 
 void rwmutex_init(struct rwmutex *mutex)
 {
@@ -29,18 +15,15 @@ void rwmutex_init(struct rwmutex *mutex)
   mutex->last = NULL;
 }
 
-void rwmutex_RLock(struct rwmutex *mutex)
-{
+void rwmutex_RLock(struct rwmutex *mutex){
   pthread_mutex_lock(&(mutex->mutex));
 
-  if (mutex->current == NULL)
-  {
+  // if no one has lock, add it and never block
+  if (mutex->current == NULL){
     struct linked_sem *c = malloc(sizeof(struct linked_sem));
     c->type = 0;
     c->subscribers = 1;
     c->next = NULL;
-
-    printf("reader got lock: 0 \n");
 
     mutex->current = c;
     mutex->last = c;
@@ -61,9 +44,7 @@ void rwmutex_RLock(struct rwmutex *mutex)
     mutex->last->subscribers++;
     struct linked_sem *tmp = mutex->last;
     pthread_mutex_unlock(&(mutex->mutex));
-    printf("reader waiting lock \n");
     sem_wait(&(tmp->s));
-    printf("reader got lock \n");
     return;
   }
 
@@ -71,37 +52,35 @@ void rwmutex_RLock(struct rwmutex *mutex)
   struct linked_sem *c = malloc(sizeof(struct linked_sem));
   c->type = 0;
   c->subscribers = 1;
+  sem_init(&(c->s), 0, 0);
 
   mutex->last->next = c;
   mutex->last = c;
 
   pthread_mutex_unlock(&(mutex->mutex));
-
   sem_wait(&(c->s));
-
 }
 
-void rwmutex_RUnlock(struct rwmutex *mutex)
-{
-
+void rwmutex_RUnlock(struct rwmutex *mutex){
   pthread_mutex_lock(&(mutex->mutex));
 
-  if (mutex->current->type != 0)
-  {
-    printf("Wrong type for unlock, not reader\n");
+  if (mutex->current->type != 0){
+    perror("Wrong type for unlock, not reader\n");
     exit(1);
   }
 
+  // minus one to the amount of readers on the lock
   mutex->current->subscribers--;
-  if (mutex->current->subscribers <= 0)
-  {
+
+  // if it's 0 remove the node and unlock next one
+  if (mutex->current->subscribers <= 0){
     struct linked_sem *tmp = mutex->current;
     mutex->current = tmp->next;
     free(tmp);
 
     if (mutex->current != NULL)
     {
-      // if its a writer unlock all subscribers
+      // if its a reader unlock all subscribers
       if (mutex->current->type == 0) {
         for (int i = 0; i < mutex->current->subscribers; i++) {
           sem_post(&(mutex->current->s));
@@ -118,8 +97,8 @@ void rwmutex_RWLock(struct rwmutex *mutex)
 {
   pthread_mutex_lock(&(mutex->mutex));
 
-  if (mutex->current == NULL)
-  {
+  // no one has lock, add it but never block
+  if (mutex->current == NULL){
     struct linked_sem *c = malloc(sizeof(struct linked_sem));
     c->type = 1;
     c->next = NULL;
@@ -135,6 +114,7 @@ void rwmutex_RWLock(struct rwmutex *mutex)
   struct linked_sem *c = malloc(sizeof(struct linked_sem));
   c->type = 1;
   c->next = NULL;
+  sem_init(&(c->s), 0,0);
 
   mutex->last->next = c;
   mutex->last = c;
@@ -146,32 +126,25 @@ void rwmutex_RWLock(struct rwmutex *mutex)
 void rwmutex_RWUnlock(struct rwmutex *mutex)
 {
   pthread_mutex_lock(&(mutex->mutex));
-
-  if (mutex->current->type != 1)
-  {
-    printf("Wrong type for unlock, not Writer\n");
+  if (mutex->current->type != 1){
+    perror("Wrong type for unlock, not Writer\n");
     exit(1);
   }
 
+  // delete current node 
   struct linked_sem *tmp = mutex->current;
   mutex->current = tmp->next;
   free(tmp);
 
 
-  // if the next is a reader unlock all consecutive readers
-  if (mutex->current != NULL)
-  {
-      sem_post(&(mutex->current->s));
-    // if its a writer unlock all subscribers
-    if (mutex->current->type == 0)
-    {
-      for (int i = 0; i < mutex->current->subscribers; i++)
-      {
+  // unlock next node
+  if (mutex->current != NULL){
+    // if its a reader unlock all subscribers
+    if (mutex->current->type == 0){
+      for (int i = 0; i < mutex->current->subscribers; i++){
         sem_post(&(mutex->current->s));
       }
-    }
-    else
-    {
+    }else{
       sem_post(&(mutex->current->s));
     }
   }

@@ -98,11 +98,16 @@ void rwmutex_RUnlock(struct rwmutex *mutex)
     exit(1);
   }
 
-  mutex->current->subscribers--;
 
   printf("reader unlock: %d \n", mutex->current->seq);
+
+
+  mutex->current->subscribers--;
   if (mutex->current->subscribers <= 0)
   {
+    struct linked_sem *tmp = mutex->current;
+    mutex->current = tmp->next;
+    free(tmp);
 
     if (mutex->current != NULL)
     {
@@ -115,13 +120,6 @@ void rwmutex_RUnlock(struct rwmutex *mutex)
         sem_post(&(mutex->current->s));
       }
     }
-  }
-  struct linked_sem *tmp = mutex->current;
-  mutex->current = tmp->next;
-  free(tmp);
-
-  if (mutex->current != NULL){
-    sem_post(&(mutex->current->s));
   }
   pthread_mutex_unlock(&(mutex->mutex));
 }

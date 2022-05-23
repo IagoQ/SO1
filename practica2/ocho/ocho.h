@@ -1,15 +1,22 @@
 #pragma once
 
-
 #include <pthread.h>
 #include <semaphore.h>
 
 struct _Channel {
+
     int value;
-    pthread_mutex_t lock;
-    sem_t reader;
+    
+    /* evita que otro escritor escriba antes de 
+    que se lea lo que escribio el escritor acutal */
+    pthread_mutex_t lock; 
+    
+    /* indica si se escribió algun valor */
     sem_t writer;
-    sem_t extra;
+    
+    /* indica si se leyó el valor escrito */
+    sem_t reader;
+    
 };
 
 typedef struct _Channel* Channel;

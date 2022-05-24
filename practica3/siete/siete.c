@@ -1,0 +1,85 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <mpi.h>
+#include <assert.h>
+
+// Creates an array of integers
+int* init_array(int n) {
+  int* array = malloc(sizeof(int) * n);
+  assert(array != NULL);
+
+  for (int i = 0; i < n; i++) {
+    array[i] = i;
+  }
+  return array;
+}
+
+// Computes the sum of an array of integers
+int compute_add(int* array, int n) {
+  int sum = 0;
+
+  for (int i = 0; i < n; i++) {
+    sum += array[i];
+  }
+  return sum;
+}
+
+int main(int argc, char** argv) {
+    
+  // Array size
+  //int n = 40;
+
+  MPI_Init(&argc, &argv);
+
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  int size;
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  // Number of elements per process (habria que dividir bien del total)
+  //int n_per_proc = n/size;
+  int n_per_proc = 40;
+
+  // Create the array of numbers on the root process
+  int* array = NULL;
+  if (rank == 0) {
+    array = init_array(n_per_proc * size);
+  }
+
+  // For each process, create a buffer that will contain a subset of the array
+  int* sub_array = malloc(sizeof(int) * n_per_proc);
+  assert(sub_array != NULL);
+
+  // Scatter the array from the root process to all processes
+  MPI_Scatter(array, n_per_proc, MPI_INT, sub_array, n_per_proc, MPI_INT, 0, MPI_COMM_WORLD);
+
+  // Computes the sum of the subset
+  int sub_add = compute_add(sub_array, n_per_proc);
+
+  // Gather all partial sums to the root process
+  int *sub_adds = NULL;
+  if (rank == 0) {
+    sub_adds = malloc(sizeof(int) * size);
+    assert(sub_adds != NULL);
+  }
+  MPI_Gather(&sub_add, 1, MPI_INT, sub_adds, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+  // Computes the total sum of all numbers
+  if (rank == 0) {
+    int add = compute_add(sub_adds, size);
+    printf("La suma es: %d\n", add);
+    // Computes the sum using the full array for comparison
+    int original_add = compute_add(array, n_per_proc * size);
+    printf("La suma usando el array completo es: %d\n", original_add);
+  }
+
+
+  if (rank == 0) {
+    free(array);
+    free(sub_adds);
+  }
+  free(sub_array);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Finalize();
+}

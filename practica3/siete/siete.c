@@ -3,6 +3,8 @@
 #include <mpi.h>
 #include <assert.h>
 
+#define N 13
+
 // Creates an array of integers
 int* init_array(int n) {
   int* array = malloc(sizeof(int) * n);
@@ -11,6 +13,7 @@ int* init_array(int n) {
   for (int i = 0; i < n; i++) {
     array[i] = i;
   }
+
   return array;
 }
 
@@ -37,18 +40,32 @@ int main(int argc, char** argv) {
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   // Number of elements per process (habria que dividir bien del total)
-  //int n_per_proc = n/size;
-  int n_per_proc = 40;
+  // int n_per_proc = 40;
+  int n_per_proc = N / size;
 
   // Create the array of numbers on the root process
   int* array = NULL;
   if (rank == 0) {
-    array = init_array(n_per_proc * size);
+    array = init_array(N);
   }
 
   // For each process, create a buffer that will contain a subset of the array
-  int* sub_array = malloc(sizeof(int) * n_per_proc);
+  int* sub_array;
+  int leftovers = N % size;
+  if (!(rank == size)) {
+     sub_array = malloc(sizeof(int) * n_per_proc);
+  } else {
+     sub_array = malloc(sizeof(int) * n_per_proc + leftovers);
+  }
   assert(sub_array != NULL);
+
+  int sendcounts[size];
+  int i;
+  for (i = 0; i < size - 1; i++) {
+    sendcounts[i] = n_per_proc;
+  }
+  sendcounts[i] = n_per_proc + leftovers;
+
 
   // Scatter the array from the root process to all processes
   MPI_Scatter(array, n_per_proc, MPI_INT, sub_array, n_per_proc, MPI_INT, 0, MPI_COMM_WORLD);

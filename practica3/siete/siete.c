@@ -3,9 +3,10 @@
 #include <mpi.h>
 #include <assert.h>
 
-#define N 15
+// Tamaño del array
+#define N 3363
 
-// Creates an array of integers
+// Crea un array de enteros
 int* init_array(int n) {
   int* array = malloc(sizeof(int) * n);
   assert(array != NULL);
@@ -17,7 +18,7 @@ int* init_array(int n) {
   return array;
 }
 
-// Computes the sum of an array of integers
+// Calcula la suma de un array de enteros
 int compute_add(int* array, int n) {
   int sum = 0;
 
@@ -28,9 +29,6 @@ int compute_add(int* array, int n) {
 }
 
 int main(int argc, char** argv) {
-    
-  // Array size
-  //int n = 40;
 
   MPI_Init(&argc, &argv);
 
@@ -39,27 +37,26 @@ int main(int argc, char** argv) {
   int size;
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  // Number of elements per process (habria que dividir bien del total)
-  // int n_per_proc = 40;
+  // Número de elementos por proceso
   int n_per_proc = N / size;
 
-  // Create the array of numbers on the root process
+  // Crear el array de números en el proceso raíz
   int* array = NULL;
   if (rank == 0) {
     array = init_array(N);
   }
 
-  // For each process, create a buffer that will contain a subset of the array
+  // Para cada proceso, crea un buffer que contendrá una parte del array
   int* sub_array;
   int leftovers = N % size;
-  if (!(rank == size)) {
+  if (!(rank == (size - 1))) {
      sub_array = malloc(sizeof(int) * n_per_proc);
   } else {
-     sub_array = malloc(sizeof(int) * n_per_proc + leftovers);
+     sub_array = malloc(sizeof(int) * (n_per_proc + leftovers));
   }
   assert(sub_array != NULL);
 
-  // cantidad de elementos por proc
+  // Cantidad de elementos por proceso
   int numbercounts[size];
   int i;
   for (i = 0; i < size - 1; i++) {
@@ -67,38 +64,35 @@ int main(int argc, char** argv) {
   }
   numbercounts[i] = n_per_proc + leftovers;
 
-  // offset del array para cada proc
+  // offset del array para cada proceso
   int displs[size];
   displs[0] = 0;
   for (i = 0; i < size - 1; i++) {
     displs[i+1] = displs[i] + numbercounts[i];
   }
 
-  // Scatter the array from the root process to all processes 
+  // Divide y distribuye el array desde el proceso raíz a todos los procesos
   // int MPI_Scatterv(void *sendbuf, int *sendcounts, int *displs,
   // MPI_Datatype sendtype, void *recvbuf, int recvcount,
   // MPI_Datatype recvtype, int root, MPI_Comm comm)
-  MPI_Scatterv(array, numbercounts,displs, MPI_INT, sub_array, numbercounts[rank], MPI_INT, 0, MPI_COMM_WORLD);
-  // Computes the sum of the subset
+  MPI_Scatterv(array, numbercounts, displs, MPI_INT, sub_array, numbercounts[rank], MPI_INT, 0, MPI_COMM_WORLD);
+
+  // Calcula la suma del subconjunto 
   int sub_add = compute_add(sub_array, numbercounts[rank]);
 
-  // Gather all partial sums to the root process
+  // Reune todas las sumas parciales en el proceso raíz
   int *sub_adds = NULL;
   if (rank == 0) {
     sub_adds = malloc(sizeof(int) * size);
     assert(sub_adds != NULL);
   }
-  int recvcounts[size];
-  for (int i = 0; i < size; i++) {
-    recvcounts[i] = 1;
-  }
   MPI_Gather(&sub_add, 1, MPI_INT, sub_adds, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-  // Computes the total sum of all numbers
+  // Calcula la suma total de todos los números
   if (rank == 0) {
     int add = compute_add(sub_adds, size);
     printf("La suma es: %d\n", add);
-    // Computes the sum using the full array for comparison
+    // Calcula la suma usando el array completo para comparar
     int original_add = compute_add(array, N);
     printf("La suma usando el array completo es: %d\n", original_add);
   }

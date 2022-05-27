@@ -1,0 +1,21 @@
+Explicación ejercicio 1 
+
+La idea es que los procesos se comuniquen de a pares. En el primer paso si el id del proceso es par se comunicará con el proceso siguiente y si es impar con el anterior. Una vez que el proceso recibe el número de su compañero lo suma a su suma parcial y así cada par tendrá la misma suma parcial. De esta manera habrán quedado N/2 grupos donde cada grupo tiene la misma suma parcial. Luego en el segundo paso los procesos se comunicaran de a pares pero a su vez entre dos grupos. Por ejemplo, el primero del primer grupo con el primero del segundo grupo y el segundo del primer grupo con el segundo del segundo grupo. El valor que reciben será la suma parcial del grupo y la sumarán a su suma parcial. Ahora habrán quedado N/4 grupos donde cada grupo tiene la misma suma parcial. Luego de repetir este proceso log_2(N) veces solo quedará un gran grupo y así todos tienen la misma suma que es la suma total.
+
+
+Ejemplo con 8 procesos
+
+- Primer paso
+
+(0 <-> 1) (2 <-> 3) (4 <-> 5) (6 <-> 7)
+ 1     1   5     5   9     9   13   13
+
+- Segundo paso
+
+(0 <-> 2) (1 <-> 3) (4 <-> 6) (5 <-> 7)
+ 6     6   6     6   22   22   22   22
+
+- Tercer paso
+
+(0 <-> 4) (1 <-> 5) (2 <-> 6) (3 <-> 7)
+ 28   28   28   28   28   28   28   28

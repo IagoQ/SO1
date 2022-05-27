@@ -3,7 +3,7 @@
 #include <mpi.h>
 #include <assert.h>
 
-#define N 13
+#define N 12
 
 // Creates an array of integers
 int* init_array(int n) {
@@ -59,17 +59,26 @@ int main(int argc, char** argv) {
   }
   assert(sub_array != NULL);
 
-  int sendcounts[size];
+  // cantidad de elementos por proc
+  int numbercounts[size];
   int i;
   for (i = 0; i < size - 1; i++) {
-    sendcounts[i] = n_per_proc;
+    numbercounts[i] = n_per_proc;
   }
-  sendcounts[i] = n_per_proc + leftovers;
+  numbercounts[i] = n_per_proc + leftovers;
 
+  // offset del array para cada proc
+  int displs[size];
+  displs[0] = 0;
+  for (i = 0; i < size - 1; i++) {
+    displs[i+1] = displs[i] + numbercounts[i];
+  }
 
-  // Scatter the array from the root process to all processes
-  MPI_Scatter(array, n_per_proc, MPI_INT, sub_array, n_per_proc, MPI_INT, 0, MPI_COMM_WORLD);
-
+  // Scatter the array from the root process to all processes 
+  // int MPI_Scatterv(void *sendbuf, int *sendcounts, int *displs,
+  // MPI_Datatype sendtype, void *recvbuf, int recvcount,
+  // MPI_Datatype recvtype, int root, MPI_Comm comm)
+  MPI_Scatterv(array, numbercounts,displs, MPI_INT, sub_array, numbercounts[rank], MPI_INT, 0, MPI_COMM_WORLD);
   // Computes the sum of the subset
   int sub_add = compute_add(sub_array, n_per_proc);
 

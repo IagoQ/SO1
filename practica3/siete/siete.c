@@ -3,7 +3,7 @@
 #include <mpi.h>
 #include <assert.h>
 
-#define N 12
+#define N 15
 
 // Creates an array of integers
 int* init_array(int n) {
@@ -80,13 +80,17 @@ int main(int argc, char** argv) {
   // MPI_Datatype recvtype, int root, MPI_Comm comm)
   MPI_Scatterv(array, numbercounts,displs, MPI_INT, sub_array, numbercounts[rank], MPI_INT, 0, MPI_COMM_WORLD);
   // Computes the sum of the subset
-  int sub_add = compute_add(sub_array, n_per_proc);
+  int sub_add = compute_add(sub_array, numbercounts[rank]);
 
   // Gather all partial sums to the root process
   int *sub_adds = NULL;
   if (rank == 0) {
     sub_adds = malloc(sizeof(int) * size);
     assert(sub_adds != NULL);
+  }
+  int recvcounts[size];
+  for (int i = 0; i < size; i++) {
+    recvcounts[i] = 1;
   }
   MPI_Gather(&sub_add, 1, MPI_INT, sub_adds, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -95,7 +99,7 @@ int main(int argc, char** argv) {
     int add = compute_add(sub_adds, size);
     printf("La suma es: %d\n", add);
     // Computes the sum using the full array for comparison
-    int original_add = compute_add(array, n_per_proc * size);
+    int original_add = compute_add(array, N);
     printf("La suma usando el array completo es: %d\n", original_add);
   }
 

@@ -1,0 +1,10 @@
+erlang server idle:
+  25 mb
+erlang server 50k:
+  400 mb
+
+
+c server idle:
+ 90kb
+c server 50k:
+ 160mb

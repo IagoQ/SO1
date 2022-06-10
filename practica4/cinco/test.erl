@@ -3,7 +3,11 @@
 -import(client, [client/0]).
 -import(broadcaster, [server/0]).
 
-
+% erl
+% c(turnos).
+% c(client).
+% c(test).
+% test:test().
 
 test() -> 
 	BPid = spawn(broadcaster,server,[]),

@@ -1,0 +1,19 @@
+
+Al leveantar 50k conexiones ambos servidores pudieron manejar la carga sin fallar,
+La mayor diferencia fue en el consumo de memoria.
+El servidor erlang sin conexiones abiertas consumio una base de 25mb y bajo la carga
+de 50k conexiones el consumo de memoria subio hasta 350mb.
+El servidor en C arranco consumiendo nada mas 90kb y luego con las conexiones 160mb
+
+
+La diferencia de consumo de memoria en reposo se le puede atribuir a las abstracciones 
+de erlang, ya que aunque el programa en si sea chico para correr se tiene que cargar 
+en memoria BEAM la maquina virtual de erlang. A diferencia de C que al compilarse no 
+requiere de ningun runtime extra que consuma memoria. Por lo que su consumo de memoria
+base es bajo.
+
+
+Bajo carga la diferencia relativa entre ambos se reduce considerablemente, ya que 
+el consumo base de erlang se va a amortizado, pero erlang sigue consumiendo al 
+rededor del doble de memoria debido a el runtime y sus abstracciones "costosas".
+

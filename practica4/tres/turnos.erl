@@ -34,7 +34,7 @@ get_request(Socket, PreexistingMsgs) ->
 					get_request(Socket, PreexistingMsgs);
 
 		{close} -> gen_tcp:close(Socket);
-		{error, _} -> closed
+		{error, _} -> gen_tcp:close(Socket)
 	end.
 
 
